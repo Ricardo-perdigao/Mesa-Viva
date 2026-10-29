@@ -66,3 +66,7 @@ Para gerar a versão de produção:
 ```bash
 npm run build
 ```
+
+## Atividade 02 — evolução com MCP
+
+O relato das melhorias de acessibilidade, do uso do MCP e das verificações está em [`RELATO-ATIVIDADE-02.md`](./RELATO-ATIVIDADE-02.md).

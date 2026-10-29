@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useLandingViewModel } from '../viewmodels/useLandingViewModel.js';
 import styles from './App.module.css';
 
@@ -10,17 +11,71 @@ function Arrow({ diagonal = false }) {
 }
 
 function SignupModal({ open, submitted, onClose, onSubmit }) {
+  const dialogRef = useRef(null);
+  const successHeadingRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousFocus = document.activeElement;
+    dialogRef.current?.querySelector('input')?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+
+      const focusableElements = [...dialogRef.current.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => element.getClientRects().length > 0);
+
+      if (!focusableElements.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeIndex = focusableElements.indexOf(document.activeElement);
+
+      if (event.shiftKey && (activeIndex <= 0 || !dialogRef.current.contains(document.activeElement))) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && (activeIndex === focusableElements.length - 1 || activeIndex === -1 || !dialogRef.current.contains(document.activeElement))) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (submitted) successHeadingRef.current?.focus();
+  }, [submitted]);
+
   if (!open) return null;
 
   return (
     <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <button className={styles.modalClose} onClick={onClose} aria-label="Fechar janela">×</button>
+      <section ref={dialogRef} className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button className={styles.modalClose} type="button" onClick={onClose} aria-label="Fechar janela">×</button>
         {submitted ? (
           <div className={styles.successState}>
             <span className={styles.successIcon}>✓</span>
             <p className={styles.eyebrow}>que bom ter você aqui</p>
-            <h2 id="modal-title">Seu lugar à mesa está guardado.</h2>
+            <h2 ref={successHeadingRef} id="modal-title" tabIndex="-1">Seu lugar à mesa está guardado.</h2>
             <p>Cadastro simulado com sucesso! Em um projeto real, enviaríamos as novidades do cardápio para você.</p>
             <button className={styles.buttonPrimary} onClick={onClose}>Fechar <Arrow /></button>
           </div>
@@ -53,7 +108,7 @@ export default function App() {
       <header className={styles.header} id="inicio">
         <div className={styles.headerInner}>
           <Wordmark />
-          <button className={styles.menuToggle} onClick={vm.toggleMenu} aria-expanded={vm.isMenuOpen} aria-label="Abrir menu">{vm.isMenuOpen ? '×' : '☰'}</button>
+          <button className={styles.menuToggle} onClick={vm.toggleMenu} aria-expanded={vm.isMenuOpen} aria-label={vm.isMenuOpen ? 'Fechar menu' : 'Abrir menu'}>{vm.isMenuOpen ? '×' : '☰'}</button>
           <nav className={`${styles.navigation} ${vm.isMenuOpen ? styles.navigationOpen : ''}`} aria-label="Navegação principal">
             <a href="#cardapio" onClick={vm.closeMenu}>Cardápio</a>
             <a href="#como-funciona" onClick={vm.closeMenu}>Como funciona</a>
